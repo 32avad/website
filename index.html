@@ -3,173 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的资源目录</title>
+    <title>我的私人资源站</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .admin-box { border: 2px dashed #ec4899; background: #1f2937; }
+        .active-tab { background-color: #db2777; color: white; border-color: #db2777; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        /* 鼠标悬停在图片上时显示手型 */
+        .cursor-zoom-in { cursor: zoom-in; }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans min-h-screen pb-20">
+<body class="bg-gray-900 text-white font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- 顶部导航 -->
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <h1 class="text-2xl font-bold text-pink-500">资源预览站</h1>
-        <button onclick="toggleAdmin()" class="text-gray-500 text-xs hover:text-white">Admin</button>
+    <!-- 顶部 -->
+    <header class="h-16 border-b border-gray-800 flex justify-between items-center px-6 bg-gray-900 shrink-0 z-20">
+        <h1 class="text-2xl font-bold text-pink-500 tracking-wider">RESOURCE STORE</h1>
+        <button onclick="toggleAdmin()" class="text-xs text-gray-600 hover:text-gray-400">Admin</button>
     </header>
 
-    <!-- ================= 管理员操作区 (默认隐藏) ================= -->
-    <div id="admin-panel" class="hidden container mx-auto p-4 mt-4">
-        <div class="admin-box p-6 rounded-lg">
-            <h2 class="text-xl font-bold text-pink-400 mb-4">🔧 管理员后台</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input type="text" id="in-title" placeholder="商品标题 (例如：海边写真)" class="bg-gray-700 p-2 rounded text-white w-full">
-                <input type="text" id="in-price" placeholder="价格 (例如：9.9)" class="bg-gray-700 p-2 rounded text-white w-full">
-                <input type="text" id="in-desc" placeholder="描述 (例如：含50张图)" class="bg-gray-700 p-2 rounded text-white w-full">
-                
-                <!-- 关键：图片必须是链接 -->
-                <div class="md:col-span-2">
-                    <p class="text-xs text-gray-400 mb-1">图片链接 (请先将图片上传到 GitHub 仓库，点击图片获取链接填入这里)</p>
-                    <input type="text" id="in-img" placeholder="粘贴图片链接: https://..." class="bg-gray-700 p-2 rounded text-white w-full">
+    <div class="flex flex-1 overflow-hidden">
+        <!-- 左侧侧边栏 -->
+        <aside class="w-48 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-8 space-y-6 shrink-0 z-10">
+            <button onclick="filterBy('photo')" id="btn-photo" class="active-tab w-32 py-3 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-600/20 transition duration-300">写真</button>
+            <button onclick="filterBy('video')" id="btn-video" class="w-32 py-3 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-600/20 transition duration-300">视频</button>
+            <button onclick="filterBy('comic')" id="btn-comic" class="w-32 py-3 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-600/20 transition duration-300">漫画</button>
+            <button onclick="filterBy('all')" id="btn-all" class="mt-auto text-sm text-gray-500 hover:text-white">显示全部</button>
+        </aside>
+
+        <!-- 右侧主内容区 -->
+        <main class="flex-1 overflow-y-auto relative p-8">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl font-bold mb-2">选购流程</h2>
+                <p class="text-gray-400 text-sm">1. 浏览商品 &nbsp;→&nbsp; 2. 点击图片放大查看 &nbsp;→&nbsp; 3. 截图发给我私聊</p>
+            </div>
+
+            <!-- 商品网格 -->
+            <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                <!-- JS生成内容 -->
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= 全屏图片预览 (新增功能) ================= -->
+    <div id="preview-modal" onclick="closePreview()" class="hidden fixed inset-0 z-[100] bg-black/95 flex items-center justify-center cursor-zoom-out backdrop-blur-sm">
+        <!-- 图片容器 -->
+        <div class="relative max-w-[95vw] max-h-[95vh]">
+            <img id="preview-img" src="" class="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-md border border-gray-700">
+            <p class="text-center text-gray-500 mt-4">点击任意处关闭预览</p>
+        </div>
+    </div>
+
+    <!-- ================= 管理员后台 ================= -->
+    <div id="admin-panel" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-2xl border border-pink-500 relative">
+            <button onclick="document.getElementById('admin-panel').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕ 关闭</button>
+            <h2 class="text-xl font-bold text-pink-500 mb-4">🔧 添加新资源</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="text-xs text-gray-400">选择分类</label>
+                    <div class="flex gap-4 mt-1">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="cat" value="photo" checked> 写真</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="cat" value="video"> 视频</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="cat" value="comic"> 漫画</label>
+                    </div>
+                </div>
+                <input type="text" id="in-title" placeholder="标题" class="bg-gray-700 p-2 rounded text-white w-full">
+                <input type="text" id="in-price" placeholder="价格" class="bg-gray-700 p-2 rounded text-white w-full">
+                <input type="text" id="in-desc" placeholder="描述" class="bg-gray-700 p-2 rounded text-white w-full">
+                <input type="text" id="in-img" placeholder="图片链接 (raw链接)" class="bg-gray-700 p-2 rounded text-white w-full col-span-2">
+            </div>
+            <div class="mt-6 flex gap-4 border-t border-gray-700 pt-4">
+                <button onclick="addItem()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold w-1/3">1. 添加预览</button>
+                <div class="flex-1 text-right">
+                    <button onclick="exportData()" class="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded font-bold animate-pulse">2. 生成保存代码!</button>
                 </div>
             </div>
-
-            <div class="mt-4 flex gap-4">
-                <button onclick="addItem()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold">
-                    + 添加到列表
-                </button>
-                <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold ml-auto">
-                    💾 生成保存代码
-                </button>
-            </div>
-
-            <!-- 数据导出区 -->
-            <div id="export-area" class="hidden mt-6">
-                <p class="text-yellow-400 text-sm mb-2">⚠ 请复制下方代码，覆盖到 <b>data.js</b> 文件中，然后上传 GitHub 即可更新网站：</p>
-                <textarea id="export-code" class="w-full h-32 bg-black text-green-400 p-4 rounded text-xs font-mono"></textarea>
+            <div id="export-box" class="hidden mt-4">
+                <p class="text-yellow-400 text-xs mb-1">⬇️ 全选复制下面所有代码，覆盖 data.js 文件，然后保存刷新！</p>
+                <textarea id="export-code" class="w-full h-24 bg-black text-green-400 text-xs p-2 rounded"></textarea>
             </div>
         </div>
     </div>
-    <!-- ================= 管理员区域结束 ================= -->
 
-    <!-- 标语 -->
-    <section class="text-center py-10 px-4">
-        <h2 class="text-3xl font-bold mb-2">选购流程</h2>
-        <p class="text-gray-400 text-sm">1. 浏览商品 &nbsp;→&nbsp; 2. 截图你想要的 &nbsp;→&nbsp; 3. 发给我私聊付款</p>
-    </section>
-
-    <!-- 商品列表 -->
-    <div id="product-grid" class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- JS 会把商品渲染在这里 -->
-    </div>
-
-    <!-- 引入数据 -->
+    <!-- 引入数据文件 -->
     <script src="./data.js"></script>
 
     <script>
-        // 如果 data.js 是空的，初始化为空数组
-        if (typeof products === 'undefined') var products = [];
+        let currentCategory = 'photo'; 
 
-        // 页面加载时渲染列表
         window.onload = function() {
-            render();
+            if (typeof products === 'undefined') window.products = [];
+            filterBy('photo'); 
         }
 
-        // 渲染函数
-        function render() {
+        // 打开预览大图
+        function openPreview(url) {
+            const modal = document.getElementById('preview-modal');
+            const img = document.getElementById('preview-img');
+            img.src = url;
+            modal.classList.remove('hidden');
+        }
+
+        // 关闭预览
+        function closePreview() {
+            document.getElementById('preview-modal').classList.add('hidden');
+            // 清空src防止关闭后还在加载
+            setTimeout(() => { document.getElementById('preview-img').src = ''; }, 200);
+        }
+
+        function filterBy(category) {
+            currentCategory = category;
+            document.querySelectorAll('aside button').forEach(btn => btn.classList.remove('active-tab'));
+            document.getElementById('btn-' + category).classList.add('active-tab');
+
             const grid = document.getElementById('product-grid');
             grid.innerHTML = "";
 
-            if (products.length === 0) {
-                grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">暂无商品，请点击右上角 Admin 添加。</p>';
+            const filtered = category === 'all' ? products : products.filter(item => item.category === category);
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 text-gray-500">此分类下暂无商品<br>请点击 Admin 添加</div>`;
                 return;
             }
 
-            products.forEach((item, index) => {
+            filtered.forEach((item, index) => {
+                const realIndex = products.indexOf(item);
+                
+                // 修改说明：
+                // 1. h-64: 高度增加，让长图显示更多
+                // 2. object-contain: 保证图片完整显示，不裁切
+                // 3. bg-black: 空白区域填黑，显得高级
+                // 4. onclick: 点击图片触发 openPreview
+                
                 const card = `
-                <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 shadow-xl group">
-                    <div class="relative h-56 overflow-hidden bg-black">
-                        <img src="${item.img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://via.placeholder.com/400?text=No+Image'">
-                        <div class="absolute bottom-0 left-0 bg-pink-600 text-white text-xs px-2 py-1">预览</div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-lg font-bold text-white mb-1">${item.title}</h3>
-                        <p class="text-gray-400 text-xs mb-3">${item.desc}</p>
-                        <div class="flex justify-between items-center border-t border-gray-700 pt-3">
-                            <span class="text-xl font-bold text-pink-500">¥${item.price}</span>
-                            <button onclick="alert('请截图此商品发给店主')" class="text-gray-400 text-xs hover:text-white">购买方式</button>
+                <div class="bg-gray-800 rounded border border-gray-700 overflow-hidden hover:border-pink-500 transition group relative flex flex-col">
+                    <div class="h-64 bg-black relative w-full cursor-zoom-in group-hover:opacity-90 transition" onclick="openPreview('${item.img}')">
+                        <img src="${item.img}" class="w-full h-full object-contain" 
+                             onerror="this.src='https://via.placeholder.com/400?text=Error'">
+                        <div class="absolute top-2 right-2 bg-black/60 text-xs px-2 py-1 rounded text-white backdrop-blur-sm border border-gray-600">
+                            🔍 点击放大
                         </div>
-                        <!-- 管理员删除按钮 (仅在生成代码时有效，界面不做复杂交互) -->
-                        <button onclick="deleteItem(${index})" class="admin-only hidden text-red-500 text-xs mt-2 w-full text-right hover:underline">删除此项</button>
+                    </div>
+                    <div class="p-4 flex flex-col flex-1">
+                        <h3 class="font-bold text-white truncate text-lg">${item.title}</h3>
+                        <p class="text-xs text-gray-400 mb-3 h-8 overflow-hidden">${item.desc}</p>
+                        <div class="mt-auto flex justify-between items-center pt-2 border-t border-gray-700">
+                            <span class="text-2xl font-bold text-pink-500">¥${item.price}</span>
+                        </div>
+                        <button onclick="deleteItem(${realIndex})" class="admin-only hidden absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded z-10 hover:bg-red-700">删除</button>
                     </div>
                 </div>`;
                 grid.innerHTML += card;
             });
 
-            // 如果处于管理员模式，显示删除按钮
-            if(!document.getElementById('admin-panel').classList.contains('hidden')){
+            if(sessionStorage.getItem('isAdmin')) {
                 document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
             }
         }
 
-        // 切换管理员面板
         function toggleAdmin() {
-            const pwd = prompt("请输入管理员密码:");
-            // 这里设置你的密码，比如 '8888'
-            if (pwd === '8888') {
+            if(sessionStorage.getItem('isAdmin')) {
                 document.getElementById('admin-panel').classList.remove('hidden');
-                render(); // 重新渲染以显示删除按钮
-            } else {
-                if(pwd) alert("密码错误");
+                return;
+            }
+            const pwd = prompt("请输入密码:");
+            if (pwd === '8888') { 
+                sessionStorage.setItem('isAdmin', 'true');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                filterBy(currentCategory); 
             }
         }
 
-        // 添加商品到内存
         function addItem() {
+            const cat = document.querySelector('input[name="cat"]:checked').value;
             const title = document.getElementById('in-title').value;
             const price = document.getElementById('in-price').value;
             const desc = document.getElementById('in-desc').value;
             const img = document.getElementById('in-img').value;
 
-            if (!title || !price || !img) {
-                alert("标题、价格、图片链接必填！");
-                return;
-            }
-
-            // 添加到数组最前面
-            products.unshift({ title, price, desc, img });
-            
-            // 清空输入框
-            document.getElementById('in-title').value = '';
-            document.getElementById('in-price').value = '';
-            document.getElementById('in-desc').value = '';
-            document.getElementById('in-img').value = '';
-
-            render();
-            alert("已添加到预览列表！记得点击【生成保存代码】并更新文件。");
+            if (!title || !img) { alert("标题和图片必填"); return; }
+            products.unshift({ category: cat, title, price, desc, img });
+            alert("预览已添加！\n\n请务必点击【2. 生成保存代码】，\n否则刷新页面后数据会消失！");
+            filterBy(cat); 
         }
 
-        // 删除商品
         function deleteItem(index) {
-            if(confirm('确定删除吗？')) {
+            if(confirm("确定删除吗？删除后记得点击Admin里的生成代码保存！")) {
                 products.splice(index, 1);
-                render();
+                filterBy(currentCategory);
+                document.getElementById('admin-panel').classList.remove('hidden');
+                exportData(); 
             }
         }
 
-        // 生成代码
         function exportData() {
-            const json = JSON.stringify(products, null, 4);
-            const code = `const products = ${json};`;
-            
-            const area = document.getElementById('export-area');
-            const textarea = document.getElementById('export-code');
-            
-            area.classList.remove('hidden');
-            textarea.value = code;
-            textarea.select();
+            const code = `const products = ${JSON.stringify(products, null, 4)};`;
+            document.getElementById('export-box').classList.remove('hidden');
+            document.getElementById('export-code').value = code;
+            document.getElementById('export-code').select();
             document.execCommand('copy');
-            alert("代码已复制！\n请打开 data.js 文件，粘贴覆盖里面的内容，然后上传 GitHub。");
+            alert("✅ 代码已复制！请覆盖 data.js 文件并保存。");
         }
     </script>
 </body>
