@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的资源目录</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .admin-box { border: 2px dashed #ec4899; background: #1f2937; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen pb-20">
+
+    <!-- 顶部导航 -->
+    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+        <h1 class="text-2xl font-bold text-pink-500">资源预览站</h1>
+        <button onclick="toggleAdmin()" class="text-gray-500 text-xs hover:text-white">Admin</button>
+    </header>
+
+    <!-- ================= 管理员操作区 (默认隐藏) ================= -->
+    <div id="admin-panel" class="hidden container mx-auto p-4 mt-4">
+        <div class="admin-box p-6 rounded-lg">
+            <h2 class="text-xl font-bold text-pink-400 mb-4">🔧 管理员后台</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="in-title" placeholder="商品标题 (例如：海边写真)" class="bg-gray-700 p-2 rounded text-white w-full">
+                <input type="text" id="in-price" placeholder="价格 (例如：9.9)" class="bg-gray-700 p-2 rounded text-white w-full">
+                <input type="text" id="in-desc" placeholder="描述 (例如：含50张图)" class="bg-gray-700 p-2 rounded text-white w-full">
+                
+                <!-- 关键：图片必须是链接 -->
+                <div class="md:col-span-2">
+                    <p class="text-xs text-gray-400 mb-1">图片链接 (请先将图片上传到 GitHub 仓库，点击图片获取链接填入这里)</p>
+                    <input type="text" id="in-img" placeholder="粘贴图片链接: https://..." class="bg-gray-700 p-2 rounded text-white w-full">
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-4">
+                <button onclick="addItem()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-bold">
+                    + 添加到列表
+                </button>
+                <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold ml-auto">
+                    💾 生成保存代码
+                </button>
+            </div>
+
+            <!-- 数据导出区 -->
+            <div id="export-area" class="hidden mt-6">
+                <p class="text-yellow-400 text-sm mb-2">⚠ 请复制下方代码，覆盖到 <b>data.js</b> 文件中，然后上传 GitHub 即可更新网站：</p>
+                <textarea id="export-code" class="w-full h-32 bg-black text-green-400 p-4 rounded text-xs font-mono"></textarea>
+            </div>
+        </div>
+    </div>
+    <!-- ================= 管理员区域结束 ================= -->
+
+    <!-- 标语 -->
+    <section class="text-center py-10 px-4">
+        <h2 class="text-3xl font-bold mb-2">选购流程</h2>
+        <p class="text-gray-400 text-sm">1. 浏览商品 &nbsp;→&nbsp; 2. 截图你想要的 &nbsp;→&nbsp; 3. 发给我私聊付款</p>
+    </section>
+
+    <!-- 商品列表 -->
+    <div id="product-grid" class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- JS 会把商品渲染在这里 -->
+    </div>
+
+    <!-- 引入数据 -->
+    <script src="./data.js"></script>
+
+    <script>
+        // 如果 data.js 是空的，初始化为空数组
+        if (typeof products === 'undefined') var products = [];
+
+        // 页面加载时渲染列表
+        window.onload = function() {
+            render();
+        }
+
+        // 渲染函数
+        function render() {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = "";
+
+            if (products.length === 0) {
+                grid.innerHTML = '<p class="text-gray-500 text-center col-span-full">暂无商品，请点击右上角 Admin 添加。</p>';
+                return;
+            }
+
+            products.forEach((item, index) => {
+                const card = `
+                <div class="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 shadow-xl group">
+                    <div class="relative h-56 overflow-hidden bg-black">
+                        <img src="${item.img}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://via.placeholder.com/400?text=No+Image'">
+                        <div class="absolute bottom-0 left-0 bg-pink-600 text-white text-xs px-2 py-1">预览</div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold text-white mb-1">${item.title}</h3>
+                        <p class="text-gray-400 text-xs mb-3">${item.desc}</p>
+                        <div class="flex justify-between items-center border-t border-gray-700 pt-3">
+                            <span class="text-xl font-bold text-pink-500">¥${item.price}</span>
+                            <button onclick="alert('请截图此商品发给店主')" class="text-gray-400 text-xs hover:text-white">购买方式</button>
+                        </div>
+                        <!-- 管理员删除按钮 (仅在生成代码时有效，界面不做复杂交互) -->
+                        <button onclick="deleteItem(${index})" class="admin-only hidden text-red-500 text-xs mt-2 w-full text-right hover:underline">删除此项</button>
+                    </div>
+                </div>`;
+                grid.innerHTML += card;
+            });
+
+            // 如果处于管理员模式，显示删除按钮
+            if(!document.getElementById('admin-panel').classList.contains('hidden')){
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            }
+        }
+
+        // 切换管理员面板
+        function toggleAdmin() {
+            const pwd = prompt("请输入管理员密码:");
+            // 这里设置你的密码，比如 '8888'
+            if (pwd === '8888') {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                render(); // 重新渲染以显示删除按钮
+            } else {
+                if(pwd) alert("密码错误");
+            }
+        }
+
+        // 添加商品到内存
+        function addItem() {
+            const title = document.getElementById('in-title').value;
+            const price = document.getElementById('in-price').value;
+            const desc = document.getElementById('in-desc').value;
+            const img = document.getElementById('in-img').value;
+
+            if (!title || !price || !img) {
+                alert("标题、价格、图片链接必填！");
+                return;
+            }
+
+            // 添加到数组最前面
+            products.unshift({ title, price, desc, img });
+            
+            // 清空输入框
+            document.getElementById('in-title').value = '';
+            document.getElementById('in-price').value = '';
+            document.getElementById('in-desc').value = '';
+            document.getElementById('in-img').value = '';
+
+            render();
+            alert("已添加到预览列表！记得点击【生成保存代码】并更新文件。");
+        }
+
+        // 删除商品
+        function deleteItem(index) {
+            if(confirm('确定删除吗？')) {
+                products.splice(index, 1);
+                render();
+            }
+        }
+
+        // 生成代码
+        function exportData() {
+            const json = JSON.stringify(products, null, 4);
+            const code = `const products = ${json};`;
+            
+            const area = document.getElementById('export-area');
+            const textarea = document.getElementById('export-code');
+            
+            area.classList.remove('hidden');
+            textarea.value = code;
+            textarea.select();
+            document.execCommand('copy');
+            alert("代码已复制！\n请打开 data.js 文件，粘贴覆盖里面的内容，然后上传 GitHub。");
+        }
+    </script>
+</body>
+</html>
